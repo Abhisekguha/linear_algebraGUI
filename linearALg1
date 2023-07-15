@@ -1,0 +1,104 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import tkinter as tk
+from tkinter import messagebox
+
+
+class LinearEquationSolver(tk.Tk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Linear Equation Solver")
+
+        self.equation_frame = tk.Frame(self)
+        self.equation_frame.pack()
+
+        self.num_variables = tk.IntVar()
+
+        self.coefficient_entries = []
+        self.constant_entries = []
+
+        num_variable_label = tk.Label(self, text="Number of variables: ")
+        num_variable_label.pack()
+
+        num_variable_entry = tk.Entry(self, textvariable=self.num_variables)
+        num_variable_entry.pack()
+
+        self.solve_button = tk.Button(self, text="Generate fields", command=self.create_entries)
+        self.solve_button.pack()
+
+    def create_entries(self):
+        num_variables = self.num_variables.get()
+
+        for i in range(num_variables):
+            coefficients = []
+            for j in range(num_variables):
+                coefficient_label = tk.Label(self.equation_frame, text=f"Coefficient for variable x{j+1} in equation {i+1}")
+                coefficient_label.pack()
+                coefficient_entry = tk.Entry(self.equation_frame)
+                coefficient_entry.pack()
+                coefficients.append(coefficient_entry)
+            self.coefficient_entries.append(coefficients)
+            constant_label = tk.Label(self.equation_frame, text=f"Constant for equation {i+1}")
+            constant_label.pack()
+            constant_entry = tk.Entry(self.equation_frame)
+            constant_entry.pack()
+            self.constant_entries.append(constant_entry)
+
+        solve_button = tk.Button(self, text="Solve", command=self.solve_linear_equations)
+        solve_button.pack()
+
+    def solve_linear_equations(self):
+        num_variables = self.num_variables.get()
+
+        coefficients = []
+        constants = []
+
+        for i in range(num_variables):
+            equation = []
+            for j in range(num_variables):
+                coefficient = float(self.coefficient_entries[i][j].get())
+                equation.append(coefficient)
+            constant = float(self.constant_entries[i].get())
+            coefficients.append(equation)
+            constants.append(constant)
+
+        try:
+            solutions = np.linalg.solve(coefficients, constants)
+
+            result_text = "Solution:\n"
+            for i, value in enumerate(solutions):
+                result_text += f"x{i+1} = {value}\n"
+
+            messagebox.showinfo("Solution", result_text)
+
+            # Generate points for plotting
+            x = np.linspace(-10, 10, 100)
+            y = np.linspace(-10, 10, 100)
+            X, Y = np.meshgrid(x, y)
+            Z = solutions[0] * X + solutions[1] * Y
+
+            # Create 3D plot
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.plot_surface(X, Y, Z, alpha=0.5)
+
+            # Add labels and title
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_zlabel('z')
+            plt.title('System of Linear Equations')
+
+            canvas = FigureCanvasTkAgg(fig, master=self)  
+            canvas.draw()
+            canvas.get_tk_widget().pack()
+
+        except np.linalg.LinAlgError:
+            messagebox.showerror("Error", "The system of linear equations has no unique solution.")
+
+
+if __name__ == "__main__":
+    app = LinearEquationSolver()
+    app.mainloop()
