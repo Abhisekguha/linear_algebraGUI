@@ -1,0 +1,121 @@
+import numpy as np
+import tkinter as tk
+from tkinter import messagebox
+
+class LinearEquationSolver(tk.Tk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Linear Equation Solver")
+
+        self.num_variables = tk.IntVar()
+        self.num_equations = tk.IntVar()
+
+        self.coefficient_entries = []
+        self.constant_entries = []
+
+        tk.Label(self, text="Number of variables: ").grid(row=0, column=0, sticky="w")
+        tk.Entry(self, textvariable=self.num_variables, width=5).grid(row=0, column=1, sticky="e")
+
+        tk.Label(self, text="Number of equations: ").grid(row=1, column=0, sticky="w")
+        tk.Entry(self, textvariable=self.num_equations, width=5).grid(row=1, column=1, sticky="e")
+
+        tk.Button(self, text="Generate fields", command=self.create_entries).grid(row=2, column=0, columnspan=2)
+
+    def create_entries(self):
+        num_variables = self.num_variables.get()
+        num_equations = self.num_equations.get()
+        
+        for widget in self.winfo_children():
+            widget.destroy()
+
+        for i in range(num_equations):
+            coefficient_entries = []
+            for j in range(num_variables):
+                tk.Label(self, text=f"Coefficient x{j+1} of equation {i+1}:").grid(row=2*i, column=2*j, sticky="w")
+                entry = tk.Entry(self, width=5)
+                entry.grid(row=2*i, column=2*j+1, sticky="e")
+                coefficient_entries.append(entry)
+
+            self.coefficient_entries.append(coefficient_entries)
+
+            tk.Label(self, text=f"Constant of equation {i+1}:").grid(row=2*i, column=2*num_variables, sticky="w")
+            entry = tk.Entry(self, width=5)
+            entry.grid(row=2*i, column=2*num_variables+1, sticky="e")
+            self.constant_entries.append(entry)
+
+        tk.Button(self, text="Solve", command=self.solve_linear_equations).grid(row=2*num_equations, column=0, columnspan=2*num_variables)
+
+        # Display the augmented matrix
+        self.display_augmented_matrix()
+
+    def solve_linear_equations(self):
+        num_variables = self.num_variables.get()
+        num_equations = self.num_equations.get()
+
+        coefficients = []
+        constants = []
+
+        for i in range(num_equations):
+            equation = []
+            for j in range(num_variables):
+                if not self.coefficient_entries[i][j].get():
+                    messagebox.showerror("Error", "All coefficient fields must be filled.")
+                    return
+                coefficient = float(self.coefficient_entries[i][j].get())
+                equation.append(coefficient)
+            if not self.constant_entries[i].get():
+                messagebox.showerror("Error", "All constant fields must be filled.")
+                return
+            constant = float(self.constant_entries[i].get())
+            coefficients.append(equation)
+            constants.append(constant)
+
+        augmented_matrix = np.column_stack((coefficients, constants))
+        rank_augmented = np.linalg.matrix_rank(augmented_matrix)
+        rank_coefficients = np.linalg.matrix_rank(coefficients)
+        
+        #If the number of equations is less than the number of variables, the system is considered underdetermined.
+        # In this case, there are infinitely many solutions, and the system is said to be dependent. 
+        # It means that there are more unknowns than constraints, so there are free variables that can take any value.
+
+        #If the number of equations is greater than the number of variables, the system is considered overdetermined. 
+        # In this case, there may be no solution that satisfies all the equations simultaneously. 
+        # The system is said to be inconsistent or contradictory. It means that there are more constraints than unknowns, resulting in conflicting equations.
+        
+        if rank_augmented != rank_coefficients:
+            messagebox.showinfo("Solution", "The system of linear equations has no solution.")
+        elif rank_augmented < num_variables:
+            messagebox.showinfo("Solution", "The system of linear equations has infinitely many solutions.")
+        else:
+            solutions = np.linalg.solve(coefficients, constants)
+
+            result_text = "Solution:\n"
+            for i, value in enumerate(solutions):
+                result_text += f"x{i+1} = {value}\n"
+
+            messagebox.showinfo("Solution", result_text)
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+
+            # Generate points for plotting
+            x = np.linspace(-10, 10, 100)
+            y = np.linspace(-10, 10, 100)
+            X, Y = np.meshgrid(x, y)
+            Z = solutions[0] * X + solutions[1] * Y
+
+            # Plot the surface
+            ax.plot_surface(X, Y, Z, alpha=0.5)
+
+            # Add labels and title
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_zlabel('z')
+            plt.title('System of Linear Equations')
+
+            plt.show()
+
+if __name__ == "__main__":
+    app = LinearEquationSolver()
+    app.mainloop()
